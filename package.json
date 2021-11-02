@@ -1,0 +1,34 @@
+{
+  "name": "catemoon-token-bep20",
+  "version": "0.1.0",
+  "description": "Catemoon BEP20 Token",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CoryITpro/catemoon-token-bep20.git"
+  },
+  "keywords": [
+    "BEP20",
+    "meme",
+    "Catemoon"
+  ],
+  "author": "coryitpro@gmail.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/CoryITpro/catemoon-token-bep20/issues"
+  },
+  "homepage": "https://github.com/CoryITpro/catemoon-token-bep20#readme",
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.3.2",
+    "@truffle/hdwallet-provider": "^1.5.1",
+    "dotenv": "^10.0.0",
+    "prettier": "^2.4.1",
+    "truffle-plugin-verify": "^0.5.16"
+  }
+}
