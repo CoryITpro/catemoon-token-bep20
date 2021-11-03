@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.7;
+pragma solidity ^0.8.0;
 
 /**
  * MM     MM EEEEEEEE  OOOOOO  WW     WW
@@ -47,7 +47,7 @@ contract Catemoon is Context, IERC20, IERC20Metadata, Ownable {
   uint256 public _liquidityFee = 5;
   uint256 private _previousLiquidityFee = _liquidityFee;
 
-  uint256 public _maxTxAmount = 5 * 10**8 * 10**18; // 0.5% of total supply
+  uint256 public _maxTxAmount = 2 * 10**9 * 10**18; // 2% of total supply
   uint256 private numTokensSellToAddToLiquidity = 5 * 10**7 * 10**18; // 0.05% of total supply
 
   IUniswapV2Router02 public immutable uniswapV2Router;
@@ -143,6 +143,18 @@ contract Catemoon is Context, IERC20, IERC20Metadata, Ownable {
     }
 
     return true;
+  }
+
+  function isExcludedFromFee(address account) public view returns(bool) {
+    return _isExcludedFromFee[account];
+  }
+
+  function includeInFee(address account) public onlyOwner {
+    _isExcludedFromFee[account] = false;
+  }
+
+  function excludeFromFee(address account) public onlyOwner {
+    _isExcludedFromFee[account] = true;
   }
 
   function removeAllFee() private {
@@ -315,5 +327,18 @@ contract Catemoon is Context, IERC20, IERC20Metadata, Ownable {
 
     _allowances[owner][spender] = amount;
     emit Approval(owner, spender, amount);
+  }
+
+  function setSwapAndLiquifyEnabled(bool _enabled) public onlyOwner {
+    swapAndLiquifyEnabled = _enabled;
+    emit SwapAndLiquifyEnabledUpdated(_enabled);
+  }
+
+  function setLiquidityFeePercent(uint256 liquidityFee) external onlyOwner() {
+    _liquidityFee = liquidityFee;
+  }
+
+  function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner() {
+    _maxTxAmount = _totalSupply * maxTxPercent / 10**2;
   }
 }

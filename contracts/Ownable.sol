@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MIT
 
+pragma solidity ^0.8.0;
+
 import "@openzeppelin/contracts/utils/Context.sol";
 
 /**
@@ -76,13 +78,15 @@ contract Ownable is Context {
         _previousOwner = _owner;
         _owner = address(0);
         _lockTime = block.timestamp + time;
+        
         emit OwnershipTransferred(_owner, address(0));
     }
     
     //Unlocks the contract for owner when _lockTime is exceeds
     function unlock() public virtual {
-        require(_previousOwner == msg.sender, "You don't have permission to unlock");
-        require(block.timestamp > _lockTime , "Contract is locked until 7 days");
+        require(_previousOwner == msg.sender, "Ownable: You don't have permission to unlock");
+        require(block.timestamp > _lockTime , "Ownable: Contract is still locked");
+
         emit OwnershipTransferred(_owner, _previousOwner);
         _owner = _previousOwner;
     }
