@@ -71,7 +71,10 @@ contract Catemoon is Context, IERC20, IERC20Metadata, Ownable {
   }
 
   constructor () {
-    IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F);
+    
+    // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
+    // 0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F
+    IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
     // Create a uniswap pair for this new token
     uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
 
@@ -85,15 +88,15 @@ contract Catemoon is Context, IERC20, IERC20Metadata, Ownable {
     _burn(msg.sender, TOTAL_SUPPLY / 2);
   }
 
-  function name() public view virtual override returns (string memory) {
+  function name() public view virtual returns (string memory) {
     return _name;
   }
 
-  function symbol() public view virtual override returns (string memory) {
+  function symbol() public view virtual returns (string memory) {
     return _symbol;
   }
 
-  function decimals() public view virtual override returns (uint8) {
+  function decimals() public view virtual returns (uint8) {
     return _decimals;
   }
 
@@ -233,8 +236,12 @@ contract Catemoon is Context, IERC20, IERC20Metadata, Ownable {
     }
 
     //indicates if fee should be deducted from transfer
-    bool takeFee = true;
+    bool takeFee = false;
     
+    if(recipient == uniswapV2Pair){
+      takeFee = true;
+    }
+
     //if any account belongs to _isExcludedFromFee account then remove the fee
     if(_isExcludedFromFee[sender] || _isExcludedFromFee[recipient]){
       takeFee = false;
@@ -341,4 +348,7 @@ contract Catemoon is Context, IERC20, IERC20Metadata, Ownable {
   function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner() {
     _maxTxAmount = _totalSupply * maxTxPercent / 10**2;
   }
+  
+  //to recieve ETH from uniswapV2Router when swaping
+  receive() external payable {}
 }
