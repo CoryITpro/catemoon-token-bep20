@@ -38,17 +38,22 @@ contract Catemoon is Context, IERC20, IERC20Metadata, Ownable {
 
   uint256 private constant TOTAL_SUPPLY = 2 * 10**2 * 10**9 * 10**18; // Total supply is 200 billion
 
-  string private _name = "Catemoon";
-  string private _symbol = "CTM";
+  string private _name = "Alien";
+  string private _symbol = "ALI";
   uint8 private _decimals = 18;
   uint256 private _totalSupply;
 
   // 5% liquidity fee
-  uint256 public _liquidityFee = 5;
+  uint256 public _liquidityFee = 7;
   uint256 private _previousLiquidityFee = _liquidityFee;
 
+  uint256 public _devFee = 2;
+  uint256 private _previousDevFee = _devFee;
+
+  address public devAddress = 0x3ed5E8D1149c26C79B5C24ADbD3A1400d838E57C;
+
   uint256 public _maxTxAmount = 2 * 10**9 * 10**18; // 2% of total supply
-  uint256 private numTokensSellToAddToLiquidity = 5 * 10**7 * 10**18; // 0.05% of total supply
+  uint256 private numTokensSellToAddToLiquidity = 1 * 10**7 * 10**18; // 0.05% of total supply
 
   IUniswapV2Router02 public immutable uniswapV2Router;
   address public immutable uniswapV2Pair;
@@ -71,10 +76,9 @@ contract Catemoon is Context, IERC20, IERC20Metadata, Ownable {
   }
 
   constructor () {
-    
-    // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
-    // 0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F
-    IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+      // 0xD99D1c33F9fC3444f8101754aBC46c52416550D1
+      // 0x10ED43C718714eb63d5aA57B78B54704E256024E
+    IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x10ED43C718714eb63d5aA57B78B54704E256024E);
     // Create a uniswap pair for this new token
     uniswapV2Pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
 
@@ -88,15 +92,15 @@ contract Catemoon is Context, IERC20, IERC20Metadata, Ownable {
     _burn(msg.sender, TOTAL_SUPPLY / 2);
   }
 
-  function name() public view virtual returns (string memory) {
+  function name() public view virtual override returns (string memory) {
     return _name;
   }
 
-  function symbol() public view virtual returns (string memory) {
+  function symbol() public view virtual override returns (string memory) {
     return _symbol;
   }
 
-  function decimals() public view virtual returns (uint8) {
+  function decimals() public view virtual override returns (uint8) {
     return _decimals;
   }
 
@@ -160,25 +164,40 @@ contract Catemoon is Context, IERC20, IERC20Metadata, Ownable {
     _isExcludedFromFee[account] = true;
   }
 
-  function removeAllFee() private {
-    if(_liquidityFee == 0) return;
+  function removeLPFee() private {
+    if(_devFee == 0 && _liquidityFee == 0) return;
     
     _previousLiquidityFee = _liquidityFee;
     _liquidityFee = 0;
   }
+
+  function removeDevFee() private {
+    if(_devFee == 0 && _liquidityFee == 0) return;
+
+    _previousDevFee = _devFee;
+    _devFee = 0;
+  }
   
-  function restoreAllFee() private {
+  function restoreLPFee() private {
     _liquidityFee = _previousLiquidityFee;
   }
 
+  function restoreDevFee() private {
+    _devFee = _previousDevFee;
+  }
+
   // This method is responsible for taking all fee, if takeFee is true
-  function _tokenTransfer(address sender, address recipient, uint256 amount, bool takeFee) private {
-    if(!takeFee) {
-      removeAllFee();
+  function _tokenTransfer(address sender, address recipient, uint256 amount, bool takeLPFee, bool takeDevFee) private {
+    if(!takeLPFee) {
+      removeLPFee();
+    }
+
+    if(!takeDevFee) {
+      removeDevFee();
     }
     
     // Calculate liquidity fee and actual transfer amount
-    (uint256 transferAmount, uint256 liquidityFee) = _getValues(amount);
+    (uint256 transferAmount, uint256 txFee) = _getValues(amount, takeLPFee, takeDevFee);
 
     uint256 senderBalance = _balances[sender];
     require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
@@ -190,24 +209,37 @@ contract Catemoon is Context, IERC20, IERC20Metadata, Ownable {
     _balances[recipient] += transferAmount;
 
     // Increase contract balance with liquidity fee
-    _balances[address(this)] = _balances[address(this)] + liquidityFee;
+    _balances[address(this)] = _balances[address(this)] + txFee;
 
     // Emit token transfer event
     emit Transfer(sender, recipient, transferAmount);
     
-    if(!takeFee) {
-      restoreAllFee();
+    if(!takeLPFee) {
+      restoreLPFee();
+    }
+
+    if(!takeDevFee) {
+      restoreDevFee();
     }
   }
 
-  function _getValues(uint256 _amount) private view returns (uint256, uint256) {
-    uint256 liquidityFee = calculateLiquidityFee(_amount);
-    uint256 transferAmount = _amount - liquidityFee;
-    return (transferAmount, liquidityFee);
+  function _getValues(uint256 _amount, bool takeLPFee, bool takeDevFee) private view returns (uint256, uint256) {
+    uint256 txFee = calculatetxFee(_amount, takeLPFee, takeDevFee);
+    uint256 transferAmount = _amount - txFee;
+    return (transferAmount, txFee);
   }
 
-  function calculateLiquidityFee(uint256 _amount) private view returns (uint256) {
-    return _amount * _liquidityFee / 10**2;
+  function calculatetxFee(uint256 _amount, bool takeLPFee, bool takeDevFee) private view returns (uint256) {
+    uint256 feePercent = 0;
+    if (takeLPFee) {
+      feePercent = feePercent + _liquidityFee - _devFee;
+    }
+
+    if (takeDevFee) {
+      feePercent = feePercent + _devFee;
+    }
+
+    return _amount * feePercent / 10**2;
   }
 
   function _transfer(address sender, address recipient, uint256 amount) internal virtual {
@@ -236,25 +268,33 @@ contract Catemoon is Context, IERC20, IERC20Metadata, Ownable {
     }
 
     //indicates if fee should be deducted from transfer
-    bool takeFee = false;
+    bool takeLPFee = false;
     
     if(recipient == uniswapV2Pair){
-      takeFee = true;
+      takeLPFee = true;
     }
+
+    //indicates if fee should be deducted from transfer
+    bool takeDevFee = true;
 
     //if any account belongs to _isExcludedFromFee account then remove the fee
     if(_isExcludedFromFee[sender] || _isExcludedFromFee[recipient]){
-      takeFee = false;
+      takeDevFee = false;
     }
     
     //transfer amount, it will take tax, burn, liquidity fee
-    _tokenTransfer(sender, recipient, amount, takeFee);
+    _tokenTransfer(sender, recipient, amount, takeLPFee, takeDevFee);
   }
 
   function swapAndLiquify(uint256 contractTokenBalance) private lockTheSwap {
+    uint256 devBalance = contractTokenBalance * _devFee / _liquidityFee;
+    uint256 lpBalance = contractTokenBalance - devBalance;
+    
     // split the contract balance into halves
-    uint256 half = contractTokenBalance / 2;
-    uint256 otherHalf = contractTokenBalance - half;
+    uint256 half = lpBalance / 2;
+    uint256 otherHalf = lpBalance - half;
+
+    uint256 swapBalance = devBalance + half;
 
     // capture the contract's current ETH balance.
     // this is so that we can capture exactly the amount of ETH that the
@@ -263,13 +303,18 @@ contract Catemoon is Context, IERC20, IERC20Metadata, Ownable {
     uint256 initialBalance = address(this).balance;
 
     // swap tokens for ETH
-    swapTokensForEth(half); // <- this breaks the ETH -> HATE swap when swap + liquify is triggered
+    swapTokensForEth(swapBalance); // <- this breaks the ETH -> HATE swap when swap + liquify is triggered
 
     // how much ETH did we just swap into?
     uint256 newBalance = address(this).balance - initialBalance;
 
+    uint256 devETH = (newBalance * devBalance) / swapBalance;
+
+    //Send to Marketing address
+    transferToAddressETH(devAddress, devETH);
+
     // add liquidity to uniswap
-    addLiquidity(otherHalf, newBalance);
+    addLiquidity(otherHalf, newBalance - devETH);
     
     emit SwapAndLiquify(half, newBalance, otherHalf);
   }
@@ -345,8 +390,16 @@ contract Catemoon is Context, IERC20, IERC20Metadata, Ownable {
     _liquidityFee = liquidityFee;
   }
 
+  function setDevFeePercent(uint256 devFee) external onlyOwner() {
+    _devFee = devFee;
+  }
+
   function setMaxTxPercent(uint256 maxTxPercent) external onlyOwner() {
     _maxTxAmount = _totalSupply * maxTxPercent / 10**2;
+  }
+
+  function transferToAddressETH(address recipient, uint256 amount) private {
+    payable(recipient).transfer(amount);
   }
   
   //to recieve ETH from uniswapV2Router when swaping
