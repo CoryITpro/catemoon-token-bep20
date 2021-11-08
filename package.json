@@ -25,10 +25,7 @@
   },
   "homepage": "https://github.com/CoryITpro/catemoon-token-bep20#readme",
   "dependencies": {
-    "@openzeppelin/contracts": "^4.3.2",
     "@truffle/hdwallet-provider": "^1.5.1",
-    "@uniswap/v2-core": "^1.0.1",
-    "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "dotenv": "^10.0.0",
     "prettier": "^2.4.1",
     "truffle-plugin-verify": "^0.5.16"
